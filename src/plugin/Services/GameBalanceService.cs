@@ -1,6 +1,8 @@
-﻿using Assets.Scripts.Actors.Enemies;
+using Assets.Scripts.Actors.Enemies;
 using Assets.Scripts.Managers;
 using System.Linq;
+using System.Collections.Generic;
+using MegabonkTogether.Common.Models;
 
 namespace MegabonkTogether.Services
 {
@@ -28,23 +30,35 @@ namespace MegabonkTogether.Services
     internal class GameBalanceService(IPlayerManagerService playerManagerService) : IGameBalanceService
     {
         private const float hpScalingPerAdditionalPlayer = 0.1f;
-        private int PlayersCount => playerManagerService.GetAllPlayersAlive().Count();
+        
+        // FIX: Avoid LINQ allocation in hot paths
+        private int PlayersCount 
+        {
+            get 
+            {
+                var players = playerManagerService.GetAllPlayersAlive();
+                return players is ICollection<Player> collection ? collection.Count : players.Count();
+            }
+        }
+        
         private static int StageIndex => MapController.runConfig?.mapData.stages.IndexOf(MapController.currentStage) ?? 0;
         private const float baseBossLampInitialChargeTimeSeconds = 3.0f;
 
-
         public int GetMaxEnemiesSpawnable()
         {
-            if (GameManager.Instance.IsFinalSwarm())
-            {
-                return 400; // Keep the original cap during Final Swarm
-            }
-
-            return GetDifficultyLevelByPlayers() switch
+            int baseCap = GetDifficultyLevelByPlayers() switch
             {
                 DifficultyLevel.Quad or DifficultyLevel.Five or DifficultyLevel.Six => 600,
                 _ => 500,
             };
+
+            if (GameManager.Instance.IsFinalSwarm())
+            {
+                // FIX: Final swarm adds to the multiplayer cap rather than dropping to 400
+                return baseCap + 200; 
+            }
+
+            return baseCap;
         }
 
         public float GetCreditsTimerMultiplier()
@@ -173,6 +187,5 @@ namespace MegabonkTogether.Services
                 _ => baseBossLampInitialChargeTimeSeconds,
             };
         }
-
     }
 }
