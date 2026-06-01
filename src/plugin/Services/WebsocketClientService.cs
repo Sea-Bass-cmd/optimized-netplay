@@ -265,12 +265,8 @@ namespace MegabonkTogether.Services
             udpClientService.CancelAnyNatIntroduction();
             Plugin.Instance.NetworkHandler.OnNetworkInterrupted("Host has disconnected");
 
-            _ = Task.Run(async () => //TODO: the task might be usesless now (Was preventing a race condition before)
-            {
-                await Task.Delay(100);
-                Plugin.Instance.NetworkHandler.ResetNetworking();
-                Plugin.GoToMainMenu();
-            });
+            Plugin.Instance.NetworkHandler.ResetNetworking();
+            Plugin.GoToMainMenu();
         }
 
         private void HandleClientDisconnected(ClientDisconnected clientDisconnected)

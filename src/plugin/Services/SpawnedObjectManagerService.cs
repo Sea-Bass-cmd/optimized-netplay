@@ -38,7 +38,7 @@ namespace MegabonkTogether.Services
         private readonly ConcurrentDictionary<uint, TumbleWeedModel> previousTumbleWeedsDelta = [];
         private ConcurrentQueue<EItemRarity> shadyGuyRarityRequest = [];
         private TumbleWeedInterpolator tumbleWeedInterpolator;
-        private uint currentObjectId = 0; //TODO: concurrency?
+        private int currentObjectId = 0;
 
         private const float TUMBLEWEED_POSITION_THRESHOLD = 0.1f;
 

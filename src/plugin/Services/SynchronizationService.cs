@@ -3105,36 +3105,13 @@ namespace MegabonkTogether.Services
             }
         }
 
-        public bool OnStartingToChargingLamp(uint lampNetplayId) //TODO: this is ass, pylon and lamp should be refactored to use the same logic, but i'm in holidays and lazy right now zzzz
+        public bool OnStartingToChargingLamp(uint value)
         {
-            var isHost = IsServerMode() ?? false;
-
-            IGameNetworkMessage message = new StartingChargingLamp
+            return HandleChargingStart(value, lampsChargingPlayers, new StartingChargingLamp
             {
-                LampNetplayId = lampNetplayId,
+                LampNetplayId = value,
                 PlayerChargingId = playerManagerService.GetLocalPlayer().ConnectionId
-            };
-
-            if (!isHost)
-            {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                return false;
-            }
-
-            var players = playerManagerService.GetAllPlayers();
-            var chargers = lampsChargingPlayers.FirstOrDefault(p => p.Key == lampNetplayId).Value;
-
-            lampsChargingPlayers[lampNetplayId] = [playerManagerService.GetLocalPlayer().ConnectionId];
-
-            if (chargers != null && chargers.Any())
-            {
-                logger.LogInfo("Another player is already charging this lamp. Preventing re trigger.");
-                return false;
-            }
-
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            return true;
+            });
         }
 
         private void OnReceivedStartingToChargingLamp(StartingChargingLamp lamp)

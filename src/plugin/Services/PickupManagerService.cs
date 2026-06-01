@@ -22,7 +22,7 @@ namespace MegabonkTogether.Services
     internal class PickupManagerService : IPickupManagerService
     {
         private readonly ConcurrentDictionary<uint, Pickup> spawnedPickups = [];
-        private uint currentPickupId = 0; //TODO: concurrency?
+        private int currentPickupId = 0;
 
         public IEnumerable<PickupModel> GetAllPickups()
         {
