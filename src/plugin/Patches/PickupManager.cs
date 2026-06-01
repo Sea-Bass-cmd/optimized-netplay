@@ -2,8 +2,9 @@
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches
 {
@@ -54,7 +55,7 @@ namespace MegabonkTogether.Patches
                 return;
             }
 
-            DynamicData.For(__result).Data.Clear();
+            var netEnt = __result.GetComponent<NetEntity>(); if (netEnt != null) UnityEngine.Object.Destroy(netEnt);
 
             var isServer = synchronizationService.IsServerMode() ?? false;
             if (isServer)
@@ -85,14 +86,14 @@ namespace MegabonkTogether.Patches
             var xpPickups = pickupManagerService.GetAllPickupXp();
             foreach ((var pickupId, var pickup) in xpPickups)
             {
-                var dynPickup = DynamicData.For(pickup);
+                
 
                 var randomConnectionId = playerManagerService.GetRandomPlayerAliveConnectionId();
                 if (randomConnectionId.HasValue)
                 {
                     if (playerManagerService.IsLocalConnectionId(randomConnectionId.Value))
                     {
-                        dynPickup.Set("ownerId", playerManagerService.GetLocalPlayer().ConnectionId);
+                        pickup.GetOrAddNetEntity().OwnerId = playerManagerService.GetLocalPlayer(.ConnectionId);
                         pickup.StartFollowingPlayer(GameManager.Instance.player.transform);
                         synchronizationService.SendPickupFollowingPlayer(playerManagerService.GetLocalPlayer().ConnectionId, pickupId);
                         continue;
@@ -102,7 +103,7 @@ namespace MegabonkTogether.Patches
                         var randomNetPlayer = playerManagerService.GetNetPlayerByNetplayId(randomConnectionId.Value);
                         if (randomNetPlayer != null)
                         {
-                            dynPickup.Set("ownerId", randomNetPlayer.ConnectionId);
+                            pickup.GetOrAddNetEntity().OwnerId = randomNetPlayer.ConnectionId;
                             pickup.StartFollowingPlayer(randomNetPlayer.Model.transform);
                             synchronizationService.SendPickupFollowingPlayer(randomNetPlayer.ConnectionId, pickupId);
                             continue;

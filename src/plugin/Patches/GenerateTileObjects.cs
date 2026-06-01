@@ -3,7 +3,8 @@ using HarmonyLib;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches
 {
@@ -84,12 +85,12 @@ namespace MegabonkTogether.Patches
                 {
                     if (obj.name.StartsWith(prefab.name))
                     {
-                        var dynamic = DynamicData.For(obj);
-                        var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                        
+                        var hasBeenSet = obj.GetOrAddNetEntity().hasBeenSetByServer;
                         if (!hasBeenSet.HasValue)
                         {
                             synchronizationService.OnSpawnedObject(obj);
-                            dynamic.Set("hasBeenSetByServer", true);
+                            obj.GetOrAddNetEntity().hasBeenSetByServer = true;
                         }
                     }
                 }
@@ -98,47 +99,47 @@ namespace MegabonkTogether.Patches
                 {
                     if (obj.name.StartsWith(prefab.name))
                     {
-                        var dynamic = DynamicData.For(obj);
-                        var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                        
+                        var hasBeenSet = obj.GetOrAddNetEntity().hasBeenSetByServer;
                         if (!hasBeenSet.HasValue)
                         {
                             synchronizationService.OnSpawnedObject(obj);
-                            dynamic.Set("hasBeenSetByServer", true);
+                            obj.GetOrAddNetEntity().hasBeenSetByServer = true;
                         }
                     }
                 }
 
                 if (obj.name.StartsWith(__instance.bossSpawner.name))
                 {
-                    var dynamic = DynamicData.For(obj);
-                    var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                    
+                    var hasBeenSet = obj.GetOrAddNetEntity().hasBeenSetByServer;
                     if (!hasBeenSet.HasValue)
                     {
                         synchronizationService.OnSpawnedObject(obj);
-                        dynamic.Set("hasBeenSetByServer", true);
+                        obj.GetOrAddNetEntity().hasBeenSetByServer = true;
                     }
                 }
 
                 if (obj.name.StartsWith(__instance.bossSpawnerFinal.name))
                 {
-                    var dynamic = DynamicData.For(obj);
-                    var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                    
+                    var hasBeenSet = obj.GetOrAddNetEntity().hasBeenSetByServer;
                     if (!hasBeenSet.HasValue)
                     {
                         synchronizationService.OnSpawnedObject(obj);
-                        dynamic.Set("hasBeenSetByServer", true);
+                        obj.GetOrAddNetEntity().hasBeenSetByServer = true;
                     }
                 }
 
                 if (MapController.currentMap.eMap == Assets.Scripts._Data.MapsAndStages.EMap.Graveyard &&
                     obj.name.StartsWith(__instance.graveyardBossPortal.name))
                 {
-                    var dynamic = DynamicData.For(obj);
-                    var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                    
+                    var hasBeenSet = obj.GetOrAddNetEntity().hasBeenSetByServer;
                     if (!hasBeenSet.HasValue)
                     {
                         synchronizationService.OnSpawnedObject(obj);
-                        dynamic.Set("hasBeenSetByServer", true);
+                        obj.GetOrAddNetEntity().hasBeenSetByServer = true;
                     }
                 }
             }

@@ -5,8 +5,9 @@ using Assets.Scripts.Inventory__Items__Pickups.Weapons.Projectiles;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches
 {
@@ -47,8 +48,8 @@ namespace MegabonkTogether.Patches
             {
                 return;
             }
-            var dynDamageContainer = DynamicData.For(__result);
-            var hasOwnerId = dynDamageContainer.Get<uint?>("ownerId"); //TODO: track DamageContainer so we dont have to do this check
+            
+            var hasOwnerId = __result.GetOrAddNetEntity().OwnerId; //TODO: track DamageContainer so we dont have to do this check
             if (hasOwnerId.HasValue)
             {
                 return;
@@ -57,14 +58,14 @@ namespace MegabonkTogether.Patches
             var owner = playerManagerService.GetNetPlayerByWeapon(weaponBase);
             if (owner != null)
             {
-                dynDamageContainer.Set("ownerId", owner.ConnectionId);
+                __result.GetOrAddNetEntity().OwnerId = owner.ConnectionId;
             }
             else
             {
                 if (GameManager.Instance.player.inventory.weaponInventory.weapons.ContainsValue(weaponBase))
                 {
                     var localPlayer = playerManagerService.GetLocalPlayer();
-                    dynDamageContainer.Set("ownerId", localPlayer.ConnectionId);
+                    __result.GetOrAddNetEntity().OwnerId = localPlayer.ConnectionId;
                 }
             }
         }

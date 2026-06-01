@@ -1,7 +1,8 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches.ConstantAttacks
 {
@@ -23,7 +24,7 @@ namespace MegabonkTogether.Patches.ConstantAttacks
             {
                 return;
             }
-            var ownerId = DynamicData.For(__instance).Get<uint?>("ownerId");
+            var ownerId = __instance.GetOrAddNetEntity().OwnerId;
             if (!ownerId.HasValue)
             {
                 return;
@@ -48,7 +49,7 @@ namespace MegabonkTogether.Patches.ConstantAttacks
             {
                 return;
             }
-            var ownerId = DynamicData.For(__instance).Get<uint?>("ownerId");
+            var ownerId = __instance.GetOrAddNetEntity().OwnerId;
             if (!ownerId.HasValue)
             {
                 return;
@@ -73,7 +74,7 @@ namespace MegabonkTogether.Patches.ConstantAttacks
             {
                 return true;
             }
-            var ownerId = DynamicData.For(__instance).Get<uint?>("ownerId");
+            var ownerId = __instance.GetOrAddNetEntity().OwnerId;
             if (!ownerId.HasValue)
             {
                 return true;

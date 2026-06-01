@@ -1,8 +1,9 @@
 ﻿using Actors.Enemies;
 using HarmonyLib;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches.Enemies
 {
@@ -25,7 +26,7 @@ namespace MegabonkTogether.Patches.Enemies
                 return true;
             }
 
-            var id = DynamicData.For(__instance.enemy).Get<uint?>("targetId");
+            var id = __instance.enemy.GetOrAddNetEntity().TargetId;
 
             if (id != null && id.HasValue)
             {

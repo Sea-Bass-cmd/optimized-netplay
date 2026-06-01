@@ -4,11 +4,12 @@ using MegabonkTogether.Common.Models;
 using MegabonkTogether.Extensions;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts.Enemies;
-using MonoMod.Utils;
+
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Services
 {
@@ -51,7 +52,7 @@ namespace MegabonkTogether.Services
             var retargetedEnemies = new List<(uint, uint)>();
             var oldTargetEnemies = spawnedEnemies.Values.Where(enemy =>
             {
-                var currentTargetid = DynamicData.For(enemy).Get<uint?>("targetId");
+                var currentTargetid = enemy.GetOrAddNetEntity().TargetId;
                 if (currentTargetid.HasValue && currentTargetid.Value == oldTargetId)
                 {
                     return true;
@@ -65,7 +66,7 @@ namespace MegabonkTogether.Services
                 var randomIndex = Random.Range(0, currentPlayersAliveExcludingOldOneId.Count());
                 var randomNewTargetId = currentPlayersAliveExcludingOldOneId.ElementAt(randomIndex);
 
-                DynamicData.For(oldEnemy).Set("targetId", randomNewTargetId);
+                oldEnemy.GetOrAddNetEntity().TargetId = randomNewTargetId;
                 var enemyId = GetEnemyByReference(oldEnemy).Key;
 
                 retargetedEnemies.Add((enemyId, randomNewTargetId));
@@ -84,7 +85,7 @@ namespace MegabonkTogether.Services
                     var playerRigidbody = playerId_rigidbody.FirstOrDefault(pr => pr.Item1 == newTargetId).Item2;
                     if (playerRigidbody != null)
                     {
-                        DynamicData.For(enemy).Set("targetId", newTargetId);
+                        enemy.GetOrAddNetEntity().TargetId = newTargetId;
                         enemy.target = playerRigidbody;
                     }
                 }

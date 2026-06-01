@@ -2,8 +2,9 @@
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches
 {
@@ -33,8 +34,8 @@ namespace MegabonkTogether.Patches
                 return true;
             }
 
-            var dynPickup = DynamicData.For(__instance);
-            var ownerId = dynPickup.Get<uint?>("ownerId");
+            
+            var ownerId = __instance.GetOrAddNetEntity().OwnerId;
             if (ownerId.HasValue)
             {
                 var isRemote = playerManagerService.IsRemoteConnectionId(ownerId.Value);
@@ -67,13 +68,13 @@ namespace MegabonkTogether.Patches
 
             if (__state.HasValue && !__state.Value) //Ignore if prefix already handled it
             {
-                DynamicData.For(__instance).Data.Clear();
+                var netEnt = __instance.GetComponent<NetEntity>(); if (netEnt != null) UnityEngine.Object.Destroy(netEnt);
                 PickupManager.Instance.DespawnPickup(__instance);
                 return;
             }
 
-            var dynPickup = DynamicData.For(__instance);
-            var ownerId = dynPickup.Get<uint?>("ownerId");
+            
+            var ownerId = __instance.GetOrAddNetEntity().OwnerId;
             if (ownerId.HasValue && playerManagerService.IsRemoteConnectionId(ownerId.Value))
             {
                 return;
@@ -110,15 +111,15 @@ namespace MegabonkTogether.Patches
 
             __instance.pickedUp = false;
 
-            var dynInstance = DynamicData.For(__instance);
+            
 
-            var ownerId = dynInstance.Get<uint?>("ownerId");
+            var ownerId = __instance.GetOrAddNetEntity().OwnerId;
             if (ownerId.HasValue)
             {
                 return true;
             }
 
-            var hasSent = dynInstance.Get<bool?>("hasSentAlready");
+            var hasSent = __instance.GetOrAddNetEntity().hasSentAlready;
             if (hasSent.HasValue && hasSent.Value)
             {
                 return false;

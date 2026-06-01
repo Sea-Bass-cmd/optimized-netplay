@@ -3,7 +3,8 @@ using HarmonyLib;
 using MegabonkTogether.Helpers;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches
 {
@@ -65,13 +66,13 @@ namespace MegabonkTogether.Patches
                             continue; //Skip microwaves , handled in MicrowavePatches
                         }
 
-                        var dynamic = DynamicData.For(obj);
-                        var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                        
+                        var hasBeenSet = obj.GetOrAddNetEntity().hasBeenSetByServer;
                         if (!hasBeenSet.HasValue)
                         {
                             synchronizationService.OnSpawnedObject(obj);
 
-                            dynamic.Set("hasBeenSetByServer", true);
+                            obj.GetOrAddNetEntity().hasBeenSetByServer = true;
                         }
                     }
                 }

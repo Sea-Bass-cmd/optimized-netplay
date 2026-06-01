@@ -3,7 +3,8 @@ using Assets.Scripts.Objects.Particles___Effects.ParticleOpacity;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches.Projectiles
 {
@@ -129,7 +130,7 @@ namespace MegabonkTogether.Patches.Projectiles
             }
 
             var isServer = synchronizationService.IsServerMode() ?? false;
-            var netplayId = DynamicData.For(__instance).Get<uint?>("netplayId");
+            var netplayId = __instance.GetOrAddNetEntity().NetId;
             if (netplayId.HasValue && !isServer)
             {
                 return false;

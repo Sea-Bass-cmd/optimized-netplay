@@ -1,7 +1,8 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches
 {
@@ -29,7 +30,7 @@ namespace MegabonkTogether.Patches
                 return true;
             }
 
-            var shrineNetplayId = DynamicData.For(__instance.gameObject).Get<uint?>("netplayId");
+            var shrineNetplayId = __instance.gameObject.GetOrAddNetEntity().NetId;
 
             if (shrineNetplayId.HasValue)
             {
@@ -59,7 +60,7 @@ namespace MegabonkTogether.Patches
             {
                 return true;
             }
-            var shrineNetplayId = DynamicData.For(__instance.gameObject).Get<uint?>("netplayId");
+            var shrineNetplayId = __instance.gameObject.GetOrAddNetEntity().NetId;
             if (shrineNetplayId.HasValue)
             {
                 return synchronizationService.OnStoppingChargingShrine(shrineNetplayId.Value);

@@ -2,8 +2,9 @@
 using MegabonkTogether.Common.Messages;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using System.Linq;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches
 {
@@ -46,7 +47,7 @@ namespace MegabonkTogether.Patches
             foreach (var pylon in __instance.pylons)
             {
                 var netplayId = spawnedObjectManagerService.AddSpawnedObject(pylon.gameObject);
-                DynamicData.For(pylon.gameObject).Set("netplayId", netplayId);
+                pylon.gameObject.GetOrAddNetEntity().NetId = netplayId;
             }
         }
 

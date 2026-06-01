@@ -4,9 +4,10 @@ using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.InteropTypes;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using System;
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches.Unity
 {
@@ -161,12 +162,12 @@ namespace MegabonkTogether.Patches.Unity
 
                 if (resultAsGameObject.name.StartsWith("BossSpawner"))
                 {
-                    var dynamic = DynamicData.For(resultAsGameObject);
-                    var hasBeenSet = dynamic.Get<bool?>("hasBeenSetByServer");
+                    
+                    var hasBeenSet = resultAsGameObject.GetOrAddNetEntity().hasBeenSetByServer;
                     if (!hasBeenSet.HasValue)
                     {
                         synchronizationService.OnSpawnedObject(resultAsGameObject);
-                        dynamic.Set("hasBeenSetByServer", true);
+                        resultAsGameObject.GetOrAddNetEntity().hasBeenSetByServer = true;
                     }
                 }
             }

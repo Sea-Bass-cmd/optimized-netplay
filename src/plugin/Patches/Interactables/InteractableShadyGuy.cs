@@ -2,7 +2,8 @@
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches.Interactables
 {
@@ -28,7 +29,7 @@ namespace MegabonkTogether.Patches.Interactables
 
             if (isServer) return;
 
-            var rarity = DynamicData.For(__instance).Get<EItemRarity?>("rarity");
+            var rarity = __instance.GetOrAddNetEntity().ItemRarity;
             if (rarity.HasValue)
             {
                 spawnedObjectManagerService.AddShadyGuyRarityRequest(rarity.Value);

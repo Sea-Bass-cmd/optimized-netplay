@@ -6,10 +6,11 @@ using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts.Enemies;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using System;
 using System.Linq;
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches.Enemies
 {
@@ -46,20 +47,20 @@ namespace MegabonkTogether.Patches.Enemies
                     var host = playerManagerService.GetLocalPlayer();
                     if (host.ConnectionId == id)
                     {
-                        DynamicData.For(__instance).Set("targetId", host.ConnectionId);
+                        __instance.GetOrAddNetEntity().TargetId = host.ConnectionId;
                     }
                     else
                     {
                         var randomPlayer = playerManagerService.GetNetPlayerByNetplayId(id);
 
                         __instance.target = randomPlayer.Rigidbody;
-                        DynamicData.For(__instance).Set("targetId", randomPlayer.ConnectionId);
+                        __instance.GetOrAddNetEntity().TargetId = randomPlayer.ConnectionId;
                     }
                 }
                 else
                 {
                     var host = playerManagerService.GetLocalPlayer();
-                    DynamicData.For(__instance).Set("targetId", host.ConnectionId);
+                    __instance.GetOrAddNetEntity().TargetId = host.ConnectionId;
                 }
 
                 var switcher = __instance.gameObject.AddComponent<TargetSwitcher>();
@@ -70,7 +71,7 @@ namespace MegabonkTogether.Patches.Enemies
                 {
                     var targetId = switcher.StartSwitching(__instance, true);
 
-                    DynamicData.For(__instance).Set("targetId", targetId);
+                    __instance.GetOrAddNetEntity().TargetId = targetId;
                 }
                 else
                 {

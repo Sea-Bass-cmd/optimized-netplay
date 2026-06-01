@@ -1,7 +1,8 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches
 {
@@ -45,7 +46,7 @@ namespace MegabonkTogether.Patches
                 return true;
             }
 
-            var lampNetplayId = DynamicData.For(__instance.gameObject).Get<uint?>("netplayId");
+            var lampNetplayId = __instance.gameObject.GetOrAddNetEntity().NetId;
 
             if (lampNetplayId.HasValue)
             {
@@ -74,7 +75,7 @@ namespace MegabonkTogether.Patches
             {
                 return true;
             }
-            var lampNetplayId = DynamicData.For(__instance.gameObject).Get<uint?>("netplayId");
+            var lampNetplayId = __instance.gameObject.GetOrAddNetEntity().NetId;
             if (lampNetplayId.HasValue)
             {
                 return synchronizationService.OnStoppingChargingLamp(lampNetplayId.Value);

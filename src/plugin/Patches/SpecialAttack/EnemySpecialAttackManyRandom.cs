@@ -1,8 +1,9 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using static EnemySpecialAttackManyRandom;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Patches.SpecialAttack
 {
@@ -24,7 +25,7 @@ namespace MegabonkTogether.Patches.SpecialAttack
                 return;
             }
 
-            var targetId = DynamicData.For(__instance.__4__this.enemy).Get<uint?>("targetId");
+            var targetId = __instance.__4__this.enemy.GetOrAddNetEntity().TargetId;
             if (targetId.HasValue)
             {
                 playerManagerService.AddGetNetplayerPositionRequest(targetId.Value);
@@ -42,7 +43,7 @@ namespace MegabonkTogether.Patches.SpecialAttack
             {
                 return;
             }
-            var targetId = DynamicData.For(__instance.__4__this.enemy).Get<uint?>("targetId");
+            var targetId = __instance.__4__this.enemy.GetOrAddNetEntity().TargetId;
             if (targetId.HasValue)
             {
                 playerManagerService.UnqueueNetplayerPositionRequest();

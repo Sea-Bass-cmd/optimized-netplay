@@ -1,7 +1,8 @@
 ﻿using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches
 {
@@ -47,7 +48,7 @@ namespace MegabonkTogether.Patches
                     Plugin.Log.LogWarning("Failed to assign netplayId to graveyard boss room lamp!");
                     return;
                 }
-                DynamicData.For(lamp.gameObject).Set("netplayId", netplayId);
+                lamp.gameObject.GetOrAddNetEntity().NetId = netplayId;
             }
 
             uint bossLeaveNetplayId = 0;
@@ -66,7 +67,7 @@ namespace MegabonkTogether.Patches
                 return;
             }
 
-            DynamicData.For(__instance.interactableGhostBossLeave.gameObject).Set("netplayId", bossLeaveNetplayId);
+            __instance.interactableGhostBossLeave.gameObject.GetOrAddNetEntity().NetId = bossLeaveNetplayId;
         }
     }
 }

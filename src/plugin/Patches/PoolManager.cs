@@ -4,7 +4,8 @@ using Assets.Scripts.Objects.Pooling;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
+
 
 namespace MegabonkTogether.Patches
 {
@@ -25,12 +26,12 @@ namespace MegabonkTogether.Patches
                 return;
             }
 
-            var weaponBaseData = DynamicData.For(weaponBase);
-            var ownerId = weaponBaseData.Get<uint?>("ownerId");
+            
+            var ownerId = weaponBase.GetOrAddNetEntity().OwnerId;
 
             if (ownerId.HasValue)
             {
-                DynamicData.For(__result).Set("ownerId", ownerId.Value);
+                __result.GetOrAddNetEntity().OwnerId = ownerId.Value;
             }
         }
     }

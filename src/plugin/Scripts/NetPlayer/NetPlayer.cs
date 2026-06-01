@@ -9,11 +9,12 @@ using MegabonkTogether.Helpers;
 using MegabonkTogether.Scripts.Snapshot;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
-using MonoMod.Utils;
+
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using MegabonkTogether.Scripts;
 
 namespace MegabonkTogether.Scripts.NetPlayer
 {
@@ -322,7 +323,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
         //    foreach (var weaponKey in inventory.weaponInventory.weapons.Keys)
         //    {
         //        var weapon = inventory.weaponInventory.weapons[weaponKey];
-        //        DynamicData.For(weapon).Set("ownerId", connectionId);
+        //        weapon.GetOrAddNetEntity().OwnerId = connectionId;
         //    }
         //}
 
@@ -358,7 +359,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
                         constantAttack.Set(weapon);
                         constantAttack.transform.SetParent(this.Model.transform);
                         constantAttacks.Add(weapon.weaponData.eWeapon, constantAttack);
-                        DynamicData.For(constantAttack).Set("ownerId", connectionId);
+                        constantAttack.GetOrAddNetEntity().OwnerId = connectionId;
                         break;
                     case EWeapon.Aegis:
                         var aegisAttack = attack.GetComponent<AegisAttack>();
@@ -366,7 +367,7 @@ namespace MegabonkTogether.Scripts.NetPlayer
                         aegisAttack.currentAmount = 2;
                         aegisAttack.transform.SetParent(this.Model.transform);
                         constantAttacks.Add(weapon.weaponData.eWeapon, aegisAttack);
-                        DynamicData.For(aegisAttack).Set("ownerId", connectionId);
+                        aegisAttack.GetOrAddNetEntity().OwnerId = connectionId;
                         break;
                     case EWeapon.Chunkers:
                         var chunkersAttack = attack.GetComponent<ChunkersAttack>();
@@ -374,28 +375,28 @@ namespace MegabonkTogether.Scripts.NetPlayer
                         chunkersAttack.currentAmount = 2;
                         chunkersAttack.transform.SetParent(this.Model.transform);
                         constantAttacks.Add(weapon.weaponData.eWeapon, chunkersAttack);
-                        DynamicData.For(chunkersAttack).Set("ownerId", connectionId);
+                        chunkersAttack.GetOrAddNetEntity().OwnerId = connectionId;
                         break;
                     case EWeapon.DragonsBreath:
                         var dragonBreathAttack = attack.GetComponent<ProjectileDragonsBreath>();
                         dragonBreathAttack.Set(weapon);
                         dragonBreathAttack.transform.SetParent(this.Model.transform);
                         constantAttacks.Add(weapon.weaponData.eWeapon, dragonBreathAttack);
-                        DynamicData.For(dragonBreathAttack).Set("ownerId", connectionId);
+                        dragonBreathAttack.GetOrAddNetEntity().OwnerId = connectionId;
                         break;
                     case EWeapon.Frostwalker:
                         var frostwalkerAttack = attack.GetComponent<IceAura>();
                         frostwalkerAttack.Set(weapon);
                         frostwalkerAttack.transform.SetParent(this.Model.transform);
                         constantAttacks.Add(weapon.weaponData.eWeapon, frostwalkerAttack);
-                        DynamicData.For(frostwalkerAttack).Set("ownerId", connectionId);
+                        frostwalkerAttack.GetOrAddNetEntity().OwnerId = connectionId;
                         break;
                     case EWeapon.SpaceNoodle:
                         var laserBeamAttack = attack.GetComponent<LaserBeamAttack>();
                         laserBeamAttack.Set(weapon);
                         laserBeamAttack.transform.SetParent(this.Model.transform);
                         constantAttacks.Add(weapon.weaponData.eWeapon, laserBeamAttack);
-                        DynamicData.For(laserBeamAttack).Set("ownerId", connectionId);
+                        laserBeamAttack.GetOrAddNetEntity().OwnerId = connectionId;
                         break;
                     default:
                         Plugin.Log.LogWarning($"Unhandled constant attack for weapon {weapon.weaponData.eWeapon}");
