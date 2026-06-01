@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Actors;
+using Assets.Scripts.Actors;
 using Assets.Scripts.Actors.Enemies;
 using Assets.Scripts.Inventory__Items__Pickups.Items;
 using HarmonyLib;
@@ -44,18 +44,8 @@ namespace MegabonkTogether.Patches.Enemies
             {
                 if (playerManagerService.TryGetGetNetplayerPosition(out uint id)) //TODO: this could be simplifed but too lazy 
                 {
-                    var host = playerManagerService.GetLocalPlayer();
-                    if (host.ConnectionId == id)
-                    {
-                        __instance.GetOrAddNetEntity().TargetId = host.ConnectionId;
-                    }
-                    else
-                    {
-                        var randomPlayer = playerManagerService.GetNetPlayerByNetplayId(id);
-
-                        __instance.target = randomPlayer.Rigidbody;
-                        __instance.GetOrAddNetEntity().TargetId = randomPlayer.ConnectionId;
-                    }
+                    var targetPlayer = playerManagerService.GetNetPlayerByNetplayId(id);
+                    __instance.GetOrAddNetEntity().TargetId = targetPlayer != null ? targetPlayer.ConnectionId : playerManagerService.GetLocalPlayer().ConnectionId;
                 }
                 else
                 {

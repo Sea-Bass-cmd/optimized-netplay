@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Actors;
+using Assets.Scripts.Actors;
 using Assets.Scripts.Actors.Enemies;
 using Assets.Scripts.Inventory__Items__Pickups.Weapons;
 using Assets.Scripts.Inventory__Items__Pickups.Weapons.Projectiles;
@@ -49,7 +49,7 @@ namespace MegabonkTogether.Patches
                 return;
             }
             
-            var hasOwnerId = __result.GetOrAddNetEntity().OwnerId; //TODO: track DamageContainer so we dont have to do this check
+            var hasOwnerId = __result.GetOrAddNetEntity().OwnerId;
             if (hasOwnerId.HasValue)
             {
                 return;

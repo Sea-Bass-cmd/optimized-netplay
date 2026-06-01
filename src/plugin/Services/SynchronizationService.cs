@@ -1,4 +1,4 @@
-﻿using Actors.Enemies;
+using Actors.Enemies;
 using Assets.Scripts._Data.Hats;
 using Assets.Scripts._Data.Tomes;
 using Assets.Scripts.Actors;
@@ -2312,7 +2312,8 @@ namespace MegabonkTogether.Services
             {
                 if (!netplayId.HasValue)
                 {
-                    if (!instance.name.Contains("ShadyGuy") && !instance.name.Contains("Microwave")) //TODO: those guys are so shady that they don't work on client side for some reason ¯\_(ツ)_/¯ (edit, they might work like interactable character fight ?)
+                    bool isLocalOnly = instance.name.Contains("ShadyGuy") || instance.name.Contains("Microwave");
+                    if (!isLocalOnly)
                     {
                         logger.LogWarning("Interactable does not have a netplayId when processing OnInteractableUsed.");
                     }

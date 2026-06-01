@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using UnityEngine;
@@ -24,9 +24,10 @@ namespace MegabonkTogether.Patches.Unity
                 return true;
             }
 
-            if (__instance == null) //TODO: i'm pretty sure its a netplayer dangling reference but how do i even debug this...
+            if (__instance == null)
             {
-                __result = GameManager.Instance.player.transform; //Hack ¯\_(ツ)_/¯
+                Plugin.Log.LogWarning("Caught dangling transform reference (likely destroyed NetPlayer). Falling back to local player transform.");
+                __result = GameManager.Instance.player.transform;
                 return false;
             }
 
