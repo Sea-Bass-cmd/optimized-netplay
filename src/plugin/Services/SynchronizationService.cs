@@ -31,7 +31,7 @@ using MegabonkTogether.Helpers;
 using MegabonkTogether.Patches;
 using MegabonkTogether.Scripts.Interactables;
 using MegabonkTogether.Scripts.Snapshot;
-using MonoMod.Utils;
+using MegabonkTogether.Scripts;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -73,6 +73,50 @@ namespace MegabonkTogether.Services
 
         public bool HasNetplaySessionStarted();
         public bool HasNetplaySessionInitialized();
+
+        
+        private bool HandleChargingStart(uint netplayId, ConcurrentDictionary<uint, ICollection<uint>> chargingDict, IGameNetworkMessage message)
+        {
+            var isHost = IsServerMode() ?? false;
+            if (!isHost)
+            {
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
+                return false;
+            }
+
+            var chargers = chargingDict.FirstOrDefault(p => p.Key == netplayId).Value;
+            chargingDict[netplayId] = new List<uint> { playerManagerService.GetLocalPlayer().ConnectionId };
+
+            if (chargers != null && chargers.Any())
+            {
+                logger.LogInfo("Another player is already charging this object. Preventing re trigger.");
+                return false;
+            }
+
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
+            return true;
+        }
+
+        private bool HandleChargingStop(uint netplayId, ConcurrentDictionary<uint, ICollection<uint>> chargingDict, IGameNetworkMessage message)
+        {
+            var isHost = IsServerMode() ?? false;
+            if (!isHost)
+            {
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
+                return false;
+            }
+
+            var chargers = chargingDict.FirstOrDefault(p => p.Key == netplayId).Value;
+            if (chargers == null || !chargers.Any())
+            {
+                logger.LogInfo("No one is charging this object.");
+                return false;
+            }
+
+            chargingDict[netplayId].Remove(playerManagerService.GetLocalPlayer().ConnectionId);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
+            return true;
+        }
 
         public void Reset();
 
@@ -275,6 +319,50 @@ namespace MegabonkTogether.Services
             return udpClientService.IsHost();
         }
 
+        
+        private bool HandleChargingStart(uint netplayId, ConcurrentDictionary<uint, ICollection<uint>> chargingDict, IGameNetworkMessage message)
+        {
+            var isHost = IsServerMode() ?? false;
+            if (!isHost)
+            {
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
+                return false;
+            }
+
+            var chargers = chargingDict.FirstOrDefault(p => p.Key == netplayId).Value;
+            chargingDict[netplayId] = new List<uint> { playerManagerService.GetLocalPlayer().ConnectionId };
+
+            if (chargers != null && chargers.Any())
+            {
+                logger.LogInfo("Another player is already charging this object. Preventing re trigger.");
+                return false;
+            }
+
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
+            return true;
+        }
+
+        private bool HandleChargingStop(uint netplayId, ConcurrentDictionary<uint, ICollection<uint>> chargingDict, IGameNetworkMessage message)
+        {
+            var isHost = IsServerMode() ?? false;
+            if (!isHost)
+            {
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
+                return false;
+            }
+
+            var chargers = chargingDict.FirstOrDefault(p => p.Key == netplayId).Value;
+            if (chargers == null || !chargers.Any())
+            {
+                logger.LogInfo("No one is charging this object.");
+                return false;
+            }
+
+            chargingDict[netplayId].Remove(playerManagerService.GetLocalPlayer().ConnectionId);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
+            return true;
+        }
+
         public void Reset()
         {
             currentState = State.None;
@@ -399,17 +487,17 @@ namespace MegabonkTogether.Services
                 var shadyGuy = spawned.GetComponentInChildren<InteractableShadyGuy>();
                 if (shadyGuy != null)
                 {
-                    DynamicData.For(shadyGuy).Set("rarity", (EItemRarity)toSpawn.SpecificData.ShadyGuyRarity);
+                    shadyGuy.GetOrAddNetEntity().ItemRarity = (EItemRaritytoSpawn.SpecificData.ShadyGuyRarity);
                 }
 
                 var microWave = spawned.GetComponentInChildren<InteractableMicrowave>();
                 if (microWave != null)
                 {
-                    DynamicData.For(microWave).Set("rarity", (EItemRarity)toSpawn.SpecificData.ShadyGuyRarity);
+                    microWave.GetOrAddNetEntity().ItemRarity = (EItemRaritytoSpawn.SpecificData.ShadyGuyRarity);
                 }
             }
 
-            DynamicData.For(spawned).Set("netplayId", toSpawn.Id);
+            spawned.GetOrAddNetEntity().NetId = toSpawn.Id;
             return true;
         }
 
@@ -421,7 +509,7 @@ namespace MegabonkTogether.Services
             if (toUpdate.IsCryptLeave)
             {
                 spawnedObjectManagerService.SetSpawnedObject(toUpdate.NetplayId, RsgController.Instance.rsgEnd.gameObject);
-                DynamicData.For(RsgController.Instance.rsgEnd.gameObject).Set("netplayId", toUpdate.NetplayId);
+                RsgController.Instance.rsgEnd.gameObject.GetOrAddNetEntity().NetId = toUpdate.NetplayId;
                 return true;
             }
 
@@ -437,7 +525,7 @@ namespace MegabonkTogether.Services
                         quantizedPos.QuantizedZ == position.QuantizedZ)
                     {
                         spawnedObjectManagerService.SetSpawnedObject(toUpdate.NetplayId, child.gameObject);
-                        DynamicData.For(child.gameObject).Set("netplayId", toUpdate.NetplayId);
+                        child.gameObject.GetOrAddNetEntity().NetId = toUpdate.NetplayId;
 
                         return true;
                     }
@@ -563,12 +651,12 @@ namespace MegabonkTogether.Services
 
         private void SendSpawnedObject(uint netplayId, GameObject obj)
         {
-            DynamicData.For(obj).Set("netplayId", netplayId);
+            obj.GetOrAddNetEntity().NetId = netplayId;
 
             var characterFight = obj.GetComponentInChildren<InteractableCharacterFight>();
             if (characterFight != null)
             {
-                DynamicData.For(characterFight.gameObject).Set("netplayId", netplayId);
+                characterFight.gameObject.GetOrAddNetEntity().NetId = netplayId;
             }
 
             var shadyGuy = obj.GetComponentInChildren<InteractableShadyGuy>();
@@ -794,8 +882,8 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            var dynEnemy = DynamicData.For(enemy);
-            var targetId = dynEnemy.Get<uint?>("targetId");
+            
+            var targetId = enemy.GetOrAddNetEntity().TargetId;
 
             if (!targetId.HasValue)
             {
@@ -936,7 +1024,7 @@ namespace MegabonkTogether.Services
             interpolator.Initialize(enemy);
             enemyManagerService.SetSpawnedEnemy(spawnedEnemy.Id, enemy);
 
-            DynamicData.For(enemy).Set("targetId", spawnedEnemy.TargetId);
+            enemy.GetOrAddNetEntity().TargetId = spawnedEnemy.TargetId;
         }
 
         public void OnSpawnedProjectile(Il2CppObjectBase proj, uint? owner = null)
@@ -1097,8 +1185,8 @@ namespace MegabonkTogether.Services
                     break;
             }
 
-            DynamicData.For(instance).Set("netplayId", netplayId);
-            DynamicData.For(instance).Set("ownerId", ownerId);
+            instance.GetOrAddNetEntity().NetId = netplayId;
+            instance.GetOrAddNetEntity().OwnerId = ownerId;
 
             udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableUnordered);
         }
@@ -1135,8 +1223,8 @@ namespace MegabonkTogether.Services
 
                             axeProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             axeProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(axeProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(axeProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            axeProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            axeProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.BlackHole:
                             var blackHoleProjectile = projectile as SpawnedBlackHoleProjectile;
@@ -1150,8 +1238,8 @@ namespace MegabonkTogether.Services
                             blackHoleProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             blackHoleProjectileInstance.startScaleSize = Quantizer.Dequantize(blackHoleProjectile.StartScaleSize);
 
-                            DynamicData.For(blackHoleProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(blackHoleProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            blackHoleProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            blackHoleProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.CorruptSword:
                             var cringeSwordProjectile = projectile as SpawnedCringeSwordProjectile;
@@ -1163,8 +1251,8 @@ namespace MegabonkTogether.Services
                             cringeSwordProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             cringeSwordProjectileInstance.movingProjectile.transform.position = Quantizer.Dequantize(cringeSwordProjectile.MovingProjectilePosition);
                             cringeSwordProjectileInstance.movingProjectile.transform.rotation = Quantizer.Dequantize(cringeSwordProjectile.MovingProjectileRotation);
-                            DynamicData.For(cringeSwordProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(cringeSwordProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            cringeSwordProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            cringeSwordProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Flamewalker:
                             var fireFieldProjectile = projectile as SpawnedFireFieldProjectile;
@@ -1176,8 +1264,8 @@ namespace MegabonkTogether.Services
                             fireFieldProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             fireFieldProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             fireFieldProjectileInstance.TryInit(0);
-                            DynamicData.For(fireFieldProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(fireFieldProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            fireFieldProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            fireFieldProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.HeroSword:
                             var heroSwordProjectile = projectile as SpawnedHeroSwordProjectile;
@@ -1189,8 +1277,8 @@ namespace MegabonkTogether.Services
                             heroSwordProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             heroSwordProjectileInstance.movingProjectile.transform.position = Quantizer.Dequantize(heroSwordProjectile.MovingProjectilePosition);
                             heroSwordProjectileInstance.movingProjectile.transform.rotation = Quantizer.Dequantize(heroSwordProjectile.MovingProjectileRotation);
-                            DynamicData.For(heroSwordProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(heroSwordProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            heroSwordProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            heroSwordProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Rockets:
                             var rocketProjectile = projectile as SpawnedRocketProjectile;
@@ -1202,8 +1290,8 @@ namespace MegabonkTogether.Services
                             rocketProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             rocketProjectileInstance.rocket.transform.position = Quantizer.Dequantize(rocketProjectile.RocketPosition);
                             rocketProjectileInstance.rocket.transform.eulerAngles = Quantizer.Dequantize(rocketProjectile.RocketRotation);
-                            DynamicData.For(rocketProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(rocketProjectileInstance.rocket).Set("ownerId", projectile.OwnerId);
+                            rocketProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            rocketProjectileInstance.rocket.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Shotgun:
                             var message = projectile as SpawnedShotgunProjectile;
@@ -1214,8 +1302,8 @@ namespace MegabonkTogether.Services
                             projectileShotgun.TryInit(0);
                             projectileShotgun.psBullets.transform.position = Quantizer.Dequantize(projectile.Position);
                             projectileShotgun.psBullets.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(projectileShotgun).Set("netplayId", projectile.Id);
-                            DynamicData.For(projectileShotgun).Set("ownerId", projectile.OwnerId);
+                            projectileShotgun.GetOrAddNetEntity().NetId = projectile.Id;
+                            projectileShotgun.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
 
                             if (attack.prefabMuzzle != null)
                             {
@@ -1239,8 +1327,8 @@ namespace MegabonkTogether.Services
                             swordProjectileInstance.weaponAttack = attack;
                             swordProjectileInstance.hitEnemies = new();
                             swordProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(swordProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(swordProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            swordProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            swordProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Dexecutioner:
                             var dexecutionerProjectile = projectile as SpawnedDexecutionerProjectile;
@@ -1255,8 +1343,8 @@ namespace MegabonkTogether.Services
                             dexecutionerProjectileInstance.hitEnemies = new();
                             dexecutionerProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             dexecutionerProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(dexecutionerProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(dexecutionerProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            dexecutionerProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            dexecutionerProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Bananarang:
                             var bananarangProjectileInstance = proj.GetComponent<ProjectileBanana>();
@@ -1266,8 +1354,8 @@ namespace MegabonkTogether.Services
                             bananarangProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             bananarangProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             bananarangProjectileInstance.rb.velocity = new Vector3(10, 10, 10); //Hack to avoid staying stuck at 0,0,0
-                            DynamicData.For(bananarangProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(bananarangProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            bananarangProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            bananarangProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Scythe:
                             var scytheProjectileInstance = proj.GetComponent<ProjectileScythe>();
@@ -1277,8 +1365,8 @@ namespace MegabonkTogether.Services
                             scytheProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             scytheProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
                             scytheProjectileInstance.expirationTime = 5f; //Hack to avoid staying stuck at 0,0,0
-                            DynamicData.For(scytheProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(scytheProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            scytheProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            scytheProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                         case EWeapon.Revolver:
                             var messageRevolver = projectile as SpawnedRevolverProjectile;
@@ -1288,8 +1376,8 @@ namespace MegabonkTogether.Services
                             revolverProjectileInstance.hitEnemies = new();
                             revolverProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             revolverProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(revolverProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(revolverProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            revolverProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            revolverProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
 
                             if (attack.prefabMuzzle != null)
                             {
@@ -1315,8 +1403,8 @@ namespace MegabonkTogether.Services
                             sniperProjectileInstance.hitEnemies = new();
                             sniperProjectileInstance.transform.position = Quantizer.Dequantize(projectile.Position);
                             sniperProjectileInstance.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(sniperProjectileInstance).Set("netplayId", projectile.Id);
-                            DynamicData.For(sniperProjectileInstance).Set("ownerId", projectile.OwnerId);
+                            sniperProjectileInstance.GetOrAddNetEntity().NetId = projectile.Id;
+                            sniperProjectileInstance.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             if (attack.prefabMuzzle != null)
                             {
                                 var muzzle = GameObject.Instantiate(attack.prefabMuzzle);
@@ -1342,8 +1430,8 @@ namespace MegabonkTogether.Services
 
                             projectileBase.transform.position = Quantizer.Dequantize(projectile.Position);
                             projectileBase.transform.eulerAngles = Quantizer.Dequantize(projectile.Rotation);
-                            DynamicData.For(projectileBase).Set("netplayId", projectile.Id);
-                            DynamicData.For(projectileBase).Set("ownerId", projectile.OwnerId);
+                            projectileBase.GetOrAddNetEntity().NetId = projectile.Id;
+                            projectileBase.GetOrAddNetEntity().OwnerId = projectile.OwnerId;
                             break;
                     }
 
@@ -1468,7 +1556,7 @@ namespace MegabonkTogether.Services
             }
             else
             {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -1528,7 +1616,7 @@ namespace MegabonkTogether.Services
             var isHost = IsServerMode() ?? false;
             if (isHost)
             {
-                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
@@ -1537,7 +1625,7 @@ namespace MegabonkTogether.Services
                     OnBossDefeated();
                 }
 
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -1625,11 +1713,11 @@ namespace MegabonkTogether.Services
             var isHost = IsServerMode() ?? false;
             if (isHost)
             {
-                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -1654,7 +1742,7 @@ namespace MegabonkTogether.Services
 
             var netplayId = pickupManagerService.AddSpawnedPickup(pickup);
 
-            DynamicData.For(pickup).Set("pickupId", netplayId);
+            pickup.GetOrAddNetEntity().PickupId = netplayId;
 
             IGameNetworkMessage message = new SpawnedPickup
             {
@@ -1664,7 +1752,7 @@ namespace MegabonkTogether.Services
                 Value = value
             };
 
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
         }
 
         private void OnReceivedSpawnedPickup(SpawnedPickup pickup)
@@ -1679,7 +1767,7 @@ namespace MegabonkTogether.Services
             //}
 
 
-            var dynP = DynamicData.For(spawnedPickup);
+            
             dynP.Data.Clear();
 
             pickupManagerService.SetSpawnedPickup(pickup.Id, spawnedPickup);
@@ -1694,7 +1782,7 @@ namespace MegabonkTogether.Services
                 Position = pos.ToNumericsVector3(),
             };
 
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
         }
 
         private void OnReceivedSpawnedOrbPickup(SpawnedPickupOrb pickup)
@@ -1710,14 +1798,14 @@ namespace MegabonkTogether.Services
             if (pickupSpawned == null)
             {
                 logger.LogWarning($"Pickup {pickupId} not found in PickupManagerService when processing OnPickupApplied. Deleting");
-                DynamicData.For(instance).Data.Clear();
+                var netEnt = instance.GetComponent<NetEntity>(); if (netEnt != null) UnityEngine.Object.Destroy(netEnt);
                 PickupManager.Instance.DespawnPickup(instance);
 
                 return;
             }
 
             pickupManagerService.RemoveSpawnedPickupById(pickupId);
-            DynamicData.For(instance).Data.Clear();
+            var netEnt = instance.GetComponent<NetEntity>(); if (netEnt != null) UnityEngine.Object.Destroy(netEnt);
 
             IGameNetworkMessage message = new PickupApplied
             {
@@ -1728,11 +1816,11 @@ namespace MegabonkTogether.Services
             var isHost = IsServerMode() ?? false;
             if (isHost)
             {
-                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -1816,7 +1904,7 @@ namespace MegabonkTogether.Services
                 }
             }
 
-            DynamicData.For(pickup).Data.Clear();
+            var netEnt = pickup.GetComponent<NetEntity>(); if (netEnt != null) UnityEngine.Object.Destroy(netEnt);
 
             PickupManager.Instance.DespawnPickup(pickup);
             pickupManagerService.RemoveSpawnedPickupById(applied.PickupId);
@@ -1850,7 +1938,7 @@ namespace MegabonkTogether.Services
                 target = netPlayer.Model.transform;
             }
 
-            var dynPickup = DynamicData.For(pickup);
+            
             dynPickup.Set("ownerId", player.PlayerId);
 
             Plugin.CAN_SEND_MESSAGES = false;
@@ -1864,7 +1952,7 @@ namespace MegabonkTogether.Services
 
             if (!isServer)
             {
-                DynamicData.For(instance).Set("hasSentAlready", true);
+                instance.GetOrAddNetEntity().HasSentAlready = true;
 
                 IGameNetworkMessage message = new WantToStartFollowingPickup
                 {
@@ -1872,7 +1960,7 @@ namespace MegabonkTogether.Services
                     OwnerId = playerManagerService.GetLocalPlayer().ConnectionId
                 };
 
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
@@ -1889,7 +1977,7 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            var currentOwnerId = DynamicData.For(pickup).Get<uint?>("ownerId");
+            var currentOwnerId = pickup.GetOrAddNetEntity().OwnerId;
             if (currentOwnerId.HasValue)
             {
                 if (currentOwnerId.Value != ownerId)
@@ -1899,13 +1987,13 @@ namespace MegabonkTogether.Services
                         PickupId = pickupId,
                         PlayerId = currentOwnerId.Value
                     };
-                    udpClientService.SendToAllClients(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                    udpClientService.SendToAllClients(msg, LiteNetLib.DeliveryMethod.Unreliable);
                 }
 
                 return;
             }
 
-            DynamicData.For(pickup).Set("ownerId", ownerId);
+            pickup.GetOrAddNetEntity().OwnerId = ownerId;
 
             IGameNetworkMessage message = new PickupFollowingPlayer
             {
@@ -1913,7 +2001,7 @@ namespace MegabonkTogether.Services
                 PlayerId = ownerId
             };
 
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             OnReceivedPickupFollowingPlayer((PickupFollowingPlayer)message);
         }
 
@@ -1929,7 +2017,7 @@ namespace MegabonkTogether.Services
                 PickupId = pickupId,
                 PlayerId = ownerId
             };
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
         }
 
         public void OnSpawnedChest(Vector3 position, Quaternion rotation, UnityEngine.Object obj)
@@ -1972,11 +2060,11 @@ namespace MegabonkTogether.Services
 
             if (isHost)
             {
-                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -2025,11 +2113,11 @@ namespace MegabonkTogether.Services
             var isHost = IsServerMode() ?? false;
             if (isHost)
             {
-                udpClientService.SendToAllClients(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(msg, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
-                udpClientService.SendToHost(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(msg, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -2094,11 +2182,11 @@ namespace MegabonkTogether.Services
             var isHost = IsServerMode() ?? false;
             if (isHost)
             {
-                udpClientService.SendToAllClients(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(msg, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
-                udpClientService.SendToHost(msg, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(msg, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -2138,7 +2226,7 @@ namespace MegabonkTogether.Services
 
         public void OnInteractableUsed(BaseInteractable instance)
         {
-            var netplayId = DynamicData.For(instance.gameObject).Get<uint?>("netplayId");
+            var netplayId = instance.gameObject.GetOrAddNetEntity().NetId;
 
             if (!netplayId.HasValue)
             {
@@ -2260,7 +2348,7 @@ namespace MegabonkTogether.Services
 
             if (isHost)
             {
-                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
@@ -2269,7 +2357,7 @@ namespace MegabonkTogether.Services
                     currentCoffin.minibossEnemies = new Il2CppSystem.Collections.Generic.HashSet<Enemy>();
                 }
 
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
 
             if (isPortal || instance.GetComponentInChildren<InteractableBossSpawnerFinal>() != null)
@@ -2696,34 +2784,11 @@ namespace MegabonkTogether.Services
 
         public bool OnStartingToChargingShrine(uint shrineNetplayId)
         {
-            var isHost = IsServerMode() ?? false;
-
-            IGameNetworkMessage message = new StartingChargingShrine
+            return HandleChargingStart(shrineNetplayId, shrineChargingPlayers, new StartingChargingShrine
             {
                 ShrineNetplayId = shrineNetplayId,
                 PlayerChargingId = playerManagerService.GetLocalPlayer().ConnectionId
-            };
-
-            if (!isHost)
-            {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                return false;
-            }
-
-            var players = playerManagerService.GetAllPlayers();
-            var chargers = shrineChargingPlayers.FirstOrDefault(p => p.Key == shrineNetplayId).Value;
-
-            shrineChargingPlayers[shrineNetplayId] = [playerManagerService.GetLocalPlayer().ConnectionId];
-
-            if (chargers != null && chargers.Any())
-            {
-                logger.LogInfo("Another player is already charging this shrine. Preventing re trigger.");
-                return false;
-            }
-
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            return true;
+            });
         }
 
         private void OnReceivedStartingToChargingShrine(StartingChargingShrine shrine)
@@ -2760,7 +2825,7 @@ namespace MegabonkTogether.Services
                 shrineObj.OnTriggerEnter();
                 Plugin.CAN_SEND_MESSAGES = true;
 
-                udpClientService.SendToAllClients(shrine, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(shrine, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
@@ -2789,34 +2854,11 @@ namespace MegabonkTogether.Services
 
         public bool OnStoppingChargingShrine(uint shrineNetplayId)
         {
-            var isHost = IsServerMode() ?? false;
-
-            IGameNetworkMessage message = new StoppingChargingShrine
+            return HandleChargingStop(shrineNetplayId, shrineChargingPlayers, new StoppingChargingShrine
             {
                 ShrineNetplayId = shrineNetplayId,
                 PlayerChargingId = playerManagerService.GetLocalPlayer().ConnectionId
-            };
-
-            if (!isHost)
-            {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                return false;
-            }
-
-            var players = playerManagerService.GetAllPlayers();
-            var chargers = shrineChargingPlayers.FirstOrDefault(p => p.Key == shrineNetplayId).Value;
-
-            shrineChargingPlayers[shrineNetplayId].Remove(playerManagerService.GetLocalPlayer().ConnectionId);
-
-            if (chargers != null && chargers.Any())
-            {
-                logger.LogInfo("Another player is still charging this shrine. Preventing stop trigger.");
-                return false;
-            }
-
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            return true;
+            });
         }
 
         private void OnReceivedStoppingChargingShrine(StoppingChargingShrine shrine)
@@ -2853,7 +2895,7 @@ namespace MegabonkTogether.Services
                 shrineObj.OnTriggerExit();
                 Plugin.CAN_SEND_MESSAGES = true;
 
-                udpClientService.SendToAllClients(shrine, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(shrine, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
@@ -2897,11 +2939,11 @@ namespace MegabonkTogether.Services
             var isHost = IsServerMode() ?? false;
             if (isHost)
             {
-                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
             else
             {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.Unreliable);
             }
         }
 
@@ -2928,7 +2970,7 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            var targetId = DynamicData.For(enemy).Get<uint?>("targetId");
+            var targetId = enemy.GetOrAddNetEntity().TargetId;
             if (targetId == null)
             {
                 logger.LogWarning("Enemy has no targetId when processing OnSpawnedEnemySpecialAttack.");
@@ -2938,7 +2980,7 @@ namespace MegabonkTogether.Services
 
             var rand = UnityEngine.Random.Range(0, playerManagerService.GetAllPlayersAlive().Count());
             var randomPlayer = playerManagerService.GetAllPlayersAlive().ElementAt(rand);
-            DynamicData.For(enemy).Set("targetId", randomPlayer.ConnectionId); //Random target
+            enemy.GetOrAddNetEntity().TargetId = randomPlayer.ConnectionId; //Random target
 
             IGameNetworkMessage message = new SpawnedEnemySpecialAttack
             {
@@ -2947,7 +2989,7 @@ namespace MegabonkTogether.Services
                 TargetId = randomPlayer.ConnectionId
             };
 
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
+            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.Unreliable);
         }
 
         private void OnReceivedSpawnedEnemySpecialAttack(SpawnedEnemySpecialAttack attack)
@@ -2981,7 +3023,7 @@ namespace MegabonkTogether.Services
                 return;
             }
 
-            DynamicData.For(enemy).Set("targetId", attack.TargetId); //Target might have changed
+            enemy.GetOrAddNetEntity().TargetId = attack.TargetId; //Target might have changed
 
             Plugin.CAN_ENEMY_USE_SPECIAL_ATTACK = true;
             enemy.specialAttackController.UseSpecialAttack(specialAttack);
@@ -2995,34 +3037,11 @@ namespace MegabonkTogether.Services
 
         public bool OnStartingToChargingPylon(uint pylonNetplayId)
         {
-            var isHost = IsServerMode() ?? false;
-
-            IGameNetworkMessage message = new StartingChargingPylon
+            return HandleChargingStart(pylonNetplayId, pylonChargingPlayers, new StartingChargingPylon
             {
                 PylonNetplayId = pylonNetplayId,
                 PlayerChargingId = playerManagerService.GetLocalPlayer().ConnectionId
-            };
-
-            if (!isHost)
-            {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                return false;
-            }
-
-            var players = playerManagerService.GetAllPlayers();
-            var chargers = pylonChargingPlayers.FirstOrDefault(p => p.Key == pylonNetplayId).Value;
-
-            pylonChargingPlayers[pylonNetplayId] = [playerManagerService.GetLocalPlayer().ConnectionId];
-
-            if (chargers != null && chargers.Any())
-            {
-                logger.LogInfo("Another player is already charging this shrine. Preventing re trigger.");
-                return false;
-            }
-
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            return true;
+            });
         }
 
         private void OnReceivedStartingToChargingPylon(StartingChargingPylon pylon)
@@ -3181,36 +3200,11 @@ namespace MegabonkTogether.Services
 
         public bool OnStoppingChargingPylon(uint pylonNetplayId)
         {
-            var isHost = IsServerMode() ?? false;
-
-            logger.LogInfo($"Player {playerManagerService.GetLocalPlayer().ConnectionId} stopping charging pylon {pylonNetplayId}");
-
-            IGameNetworkMessage message = new StoppingChargingPylon
+            return HandleChargingStop(pylonNetplayId, pylonChargingPlayers, new StoppingChargingPylon
             {
                 PylonNetplayId = pylonNetplayId,
                 PlayerChargingId = playerManagerService.GetLocalPlayer().ConnectionId
-            };
-
-            if (!isHost)
-            {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                return false;
-            }
-
-            var players = playerManagerService.GetAllPlayers();
-            var chargers = pylonChargingPlayers.FirstOrDefault(p => p.Key == pylonNetplayId).Value;
-
-            pylonChargingPlayers[pylonNetplayId].Remove(playerManagerService.GetLocalPlayer().ConnectionId);
-
-            if (chargers != null && chargers.Any())
-            {
-                logger.LogInfo("Another player is still charging this pylon. Preventing stop trigger.");
-                return false;
-            }
-
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            return true;
+            });
         }
 
         private void OnReceivedStoppingChargingPylon(StoppingChargingPylon pylon)
@@ -3272,36 +3266,13 @@ namespace MegabonkTogether.Services
             }
         }
 
-        public bool OnStoppingChargingLamp(uint lampNetplayId)
+        public bool OnStoppingChargingLamp(uint value)
         {
-            var isHost = IsServerMode() ?? false;
-
-            IGameNetworkMessage message = new StoppingChargingLamp
+            return HandleChargingStop(value, lampsChargingPlayers, new StoppingChargingLamp
             {
-                LampNetplayId = lampNetplayId,
+                LampNetplayId = value,
                 PlayerChargingId = playerManagerService.GetLocalPlayer().ConnectionId
-            };
-
-            if (!isHost)
-            {
-                udpClientService.SendToHost(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-                return false;
-            }
-
-            var players = playerManagerService.GetAllPlayers();
-            var chargers = lampsChargingPlayers.FirstOrDefault(p => p.Key == lampNetplayId).Value;
-
-            lampsChargingPlayers[lampNetplayId].Remove(playerManagerService.GetLocalPlayer().ConnectionId);
-
-            if (chargers != null && chargers.Any())
-            {
-                logger.LogInfo("Another player is still charging this lamp. Preventing stop trigger.");
-                return false;
-            }
-
-            udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
-
-            return true;
+            });
         }
 
         private void OnReceivedStoppingChargingLamp(StoppingChargingLamp lamp)
@@ -3923,7 +3894,7 @@ namespace MegabonkTogether.Services
 
             udpClientService.SendToAllClients(message, LiteNetLib.DeliveryMethod.ReliableOrdered);
 
-            DynamicData.For(tumbleWeed).Set("netplayId", netplayId);
+            tumbleWeed.GetOrAddNetEntity().NetId = netplayId;
         }
 
         private void OnReceivedTumbleWeedSpawned(TumbleWeedSpawned spawned)
@@ -3971,7 +3942,7 @@ namespace MegabonkTogether.Services
             var netplayId = spawnedObjectManagerService.GetByReference(instance.gameObject);
             if (!netplayId.HasValue)
             {
-                netplayId = DynamicData.For(instance).Get<uint?>("netplayId"); //Second attempt
+                netplayId = instance.GetOrAddNetEntity().NetId; //Second attempt
                 if (!netplayId.HasValue)
                 {
                     logger.LogWarning("TumbleWeed not found in SpawnedObjectManagerService when processing OnTumbleWeedDespawned.");
@@ -4150,7 +4121,7 @@ namespace MegabonkTogether.Services
             }
 
             var netplayId = spawnedObjectManagerService.AddSpawnedObject(obj);
-            DynamicData.For(obj).Set("netplayId", netplayId);
+            obj.GetOrAddNetEntity().NetId = netplayId;
 
             var isCryptLeave = obj == RsgController.Instance.rsgEnd.gameObject;
 
@@ -4330,13 +4301,15 @@ namespace MegabonkTogether.Services
 
         private void OnReceivedAddXp(AddXp xp)
         {
+            if (IsServerMode() == true) udpClientService.SendToAllClients(AddXp xp, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
             Plugin.CAN_SEND_MESSAGES = false;
             var playerXp = GameManager.Instance.player.inventory.playerXp;
             playerXp.xp = xp.Xp;
             playerXp.leftOverXp = xp.LeftOverXp;
             playerXp.AddXp(0);
             Plugin.CAN_SEND_MESSAGES = true;
-        }
+        
 
         public void RewardFinished()
         {
@@ -4368,9 +4341,11 @@ namespace MegabonkTogether.Services
 
         private void OnReceivedCloseEncounter(CloseEncounter close)
         {
+            if (IsServerMode() == true) udpClientService.SendToAllClients(CloseEncounter close, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
             encounterService.Close();
             OnCloseEncounter();
-        }
+        
 
         private void OnCloseEncounter()
         {
@@ -4407,9 +4382,11 @@ namespace MegabonkTogether.Services
 
         private void OnReceivedChangeGold(GoldChanged changed)
         {
+            if (IsServerMode() == true) udpClientService.SendToAllClients(GoldChanged changed, LiteNetLib.DeliveryMethod.ReliableOrdered);
+
             Plugin.CAN_SEND_MESSAGES = false;
             GameManager.Instance.player.inventory.ChangeGold(changed.Amount);
             Plugin.CAN_SEND_MESSAGES = true;
-        }
+        
     }
 }
