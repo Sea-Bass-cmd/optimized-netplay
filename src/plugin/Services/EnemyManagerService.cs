@@ -1,4 +1,4 @@
-﻿using Actors.Enemies;
+using Actors.Enemies;
 using Assets.Scripts.Actors.Enemies;
 using MegabonkTogether.Common.Models;
 using MegabonkTogether.Extensions;
@@ -38,7 +38,7 @@ namespace MegabonkTogether.Services
         private Dictionary<uint, EnemyModel> previousSpawnedEnemiesDelta = [];
         private readonly ConcurrentDictionary<Enemy, string> reviverEnemies_NetplayNames = [];
         private readonly ConcurrentDictionary<uint, int> reviverSpawnCountPerOwner = [];
-        private int currentEnemyId = 0;
+        private uint currentEnemyId = 0;
 
         private const float POSITION_TRESHOLD = 0.1f;
         private const float YAW_TRESHOLD = 5.0f;

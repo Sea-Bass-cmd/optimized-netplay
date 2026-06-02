@@ -49,7 +49,7 @@ namespace MegabonkTogether.Patches
                 return;
             }
             
-            var hasOwnerId = __result.GetOrAddNetEntity().OwnerId;
+            var hasOwnerId = NetData.Get(__result).OwnerId;
             if (hasOwnerId.HasValue)
             {
                 return;
@@ -58,14 +58,14 @@ namespace MegabonkTogether.Patches
             var owner = playerManagerService.GetNetPlayerByWeapon(weaponBase);
             if (owner != null)
             {
-                __result.GetOrAddNetEntity().OwnerId = owner.ConnectionId;
+                NetData.Get(__result).OwnerId = owner.ConnectionId;
             }
             else
             {
                 if (GameManager.Instance.player.inventory.weaponInventory.weapons.ContainsValue(weaponBase))
                 {
                     var localPlayer = playerManagerService.GetLocalPlayer();
-                    __result.GetOrAddNetEntity().OwnerId = localPlayer.ConnectionId;
+                    NetData.Get(__result).OwnerId = localPlayer.ConnectionId;
                 }
             }
         }

@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Inventory__Items__Pickups.Pickups;
+using Assets.Scripts.Inventory__Items__Pickups.Pickups;
 using MegabonkTogether.Common.Models;
 using MegabonkTogether.Extensions;
 using System.Collections.Concurrent;
@@ -22,7 +22,7 @@ namespace MegabonkTogether.Services
     internal class PickupManagerService : IPickupManagerService
     {
         private readonly ConcurrentDictionary<uint, Pickup> spawnedPickups = [];
-        private int currentPickupId = 0;
+        private uint currentPickupId = 0;
 
         public IEnumerable<PickupModel> GetAllPickups()
         {

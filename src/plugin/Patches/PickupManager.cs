@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Inventory__Items__Pickups.Pickups;
+using Assets.Scripts.Inventory__Items__Pickups.Pickups;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,7 +93,7 @@ namespace MegabonkTogether.Patches
                 {
                     if (playerManagerService.IsLocalConnectionId(randomConnectionId.Value))
                     {
-                        pickup.GetOrAddNetEntity().OwnerId = playerManagerService.GetLocalPlayer(.ConnectionId);
+                        pickup.GetOrAddNetEntity().OwnerId = playerManagerService.GetLocalPlayer().ConnectionId;
                         pickup.StartFollowingPlayer(GameManager.Instance.player.transform);
                         synchronizationService.SendPickupFollowingPlayer(playerManagerService.GetLocalPlayer().ConnectionId, pickupId);
                         continue;

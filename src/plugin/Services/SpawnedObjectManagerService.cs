@@ -1,4 +1,4 @@
-﻿using Actors.Enemies;
+using Actors.Enemies;
 using Assets.Scripts.Inventory__Items__Pickups.Items;
 using MegabonkTogether.Common.Models;
 using MegabonkTogether.Helpers;
@@ -38,7 +38,7 @@ namespace MegabonkTogether.Services
         private readonly ConcurrentDictionary<uint, TumbleWeedModel> previousTumbleWeedsDelta = [];
         private ConcurrentQueue<EItemRarity> shadyGuyRarityRequest = [];
         private TumbleWeedInterpolator tumbleWeedInterpolator;
-        private int currentObjectId = 0;
+        private uint currentObjectId = 0;
 
         private const float TUMBLEWEED_POSITION_THRESHOLD = 0.1f;
 

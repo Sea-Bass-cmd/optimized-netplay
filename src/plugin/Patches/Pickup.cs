@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Inventory__Items__Pickups.Pickups;
+using Assets.Scripts.Inventory__Items__Pickups.Pickups;
 using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -119,8 +119,8 @@ namespace MegabonkTogether.Patches
                 return true;
             }
 
-            var hasSent = __instance.GetOrAddNetEntity().hasSentAlready;
-            if (hasSent.HasValue && hasSent.Value)
+            var hasSent = __instance.GetOrAddNetEntity().HasSentAlready;
+            if (hasSent)
             {
                 return false;
             }

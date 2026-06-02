@@ -20,7 +20,6 @@ namespace MegabonkTogether.Scripts.Enemies
         private (float min, float max) switchIntervalRange = (2f, 6f);
         private IPlayerManagerService playerManagerService;
         private ISynchronizationService synchronizationService;
-        private DynamicData enemyData;
 
         private void Awake()
         {
@@ -31,7 +30,6 @@ namespace MegabonkTogether.Scripts.Enemies
         public uint StartSwitching(Enemy targetEnemy, bool pickACloseTarget = false)
         {
             enemy = targetEnemy;
-            enemyData = DynamicData.For(enemy);
             ResetTimer();
 
             if (pickACloseTarget)
@@ -127,7 +125,7 @@ namespace MegabonkTogether.Scripts.Enemies
                 }
                 if (CanSwitch())
                 {
-                    enemyData.Set("targetId", currentTargetNetplayId);
+                    enemy.GetOrAddNetEntity().TargetId = currentTargetNetplayId;
                     enemy.target = currentTarget.rigidBody;
                 }
                 ResetTimer();

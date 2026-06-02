@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Inventory__Items__Pickups.Weapons;
+using Assets.Scripts.Inventory__Items__Pickups.Weapons;
 using Assets.Scripts.Inventory__Items__Pickups.Weapons.Attacks;
 using Assets.Scripts.Objects.Pooling;
 using HarmonyLib;
@@ -27,11 +27,11 @@ namespace MegabonkTogether.Patches
             }
 
             
-            var ownerId = weaponBase.GetOrAddNetEntity().OwnerId;
+            var ownerId = NetData.Get(weaponBase).OwnerId;
 
             if (ownerId.HasValue)
             {
-                __result.GetOrAddNetEntity().OwnerId = ownerId.Value;
+                NetData.Get(__result).OwnerId = ownerId.Value;
             }
         }
     }

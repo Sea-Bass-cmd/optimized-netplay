@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System.Numerics;
 
 namespace MegabonkTogether.Common.Messages
@@ -18,5 +18,6 @@ namespace MegabonkTogether.Common.Messages
     public partial class Specific
     {
         public int ShadyGuyRarity { get; set; }
+        public bool? IsGoldenShrine { get; set; }
     }
 }

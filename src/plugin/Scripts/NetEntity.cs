@@ -15,6 +15,8 @@ namespace MegabonkTogether.Scripts
         public uint? PickupId;
         public bool HasSentAlready;
         public EItemRarity? ItemRarity; 
+        public bool? IsGoldenShrine;
+        public bool? hasBeenSetByServer;
     }
 
     public static class NetEntityExtensions
@@ -31,6 +33,24 @@ namespace MegabonkTogether.Scripts
         {
             if (comp == null || comp.gameObject == null) return null;
             return GetOrAddNetEntity(comp.gameObject);
+        }
+    }
+
+    public static class NetData
+    {
+        public class NetEntityState
+        {
+            public uint? OwnerId;
+            public uint? TargetId;
+            public uint? PickupId;
+        }
+
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, NetEntityState> data = new();
+
+        public static NetEntityState Get(object obj)
+        {
+            if (obj == null) return new NetEntityState();
+            return data.GetOrCreateValue(obj);
         }
     }
 }

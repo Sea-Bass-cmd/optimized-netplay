@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using MegabonkTogether.Services;
 using Microsoft.Extensions.DependencyInjection;
 using MegabonkTogether.Scripts;
@@ -70,6 +70,23 @@ namespace MegabonkTogether.Patches
                 Plugin.Log.LogWarning("Charge shrine has no netplay id set!");
             }
             return true;
+        }
+        /// <summary>
+        /// Ensure clients don't overwrite the synced IsGolden status when Unity calls Start()
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(ChargeShrine.Start))]
+        public static void Start_Postfix(ChargeShrine __instance)
+        {
+            if (!synchronizationService.HasNetplaySessionStarted()) return;
+            var isServer = synchronizationService.IsServerMode() ?? false;
+            if (isServer) return;
+
+            var isGoldenShrine = __instance.gameObject.GetOrAddNetEntity().IsGoldenShrine;
+            if (isGoldenShrine.HasValue)
+            {
+                __instance.isGolden = isGoldenShrine.Value;
+            }
         }
     }
 }
