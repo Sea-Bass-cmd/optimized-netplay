@@ -27,11 +27,11 @@ namespace MegabonkTogether.Patches
             }
 
             
-            var ownerId = NetData.Get(weaponBase).OwnerId;
+            var ownerId = weaponBase.GetOrAddNetEntity().OwnerId;
 
             if (ownerId.HasValue)
             {
-                NetData.Get(__result).OwnerId = ownerId.Value;
+                __result.GetOrAddNetEntity().OwnerId = ownerId.Value;
             }
         }
     }

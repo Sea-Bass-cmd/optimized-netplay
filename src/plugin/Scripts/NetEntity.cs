@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Assets.Scripts.Inventory__Items__Pickups.Items;
 
@@ -7,7 +8,7 @@ namespace MegabonkTogether.Scripts
     /// Replaces MonoMod DynamicData. Stores multiplayer network states directly 
     /// on the GameObject for O(1) retrieval and zero garbage collection overhead.
     /// </summary>
-    public class NetEntity : MonoBehaviour
+    public class NetData
     {
         public uint? NetId;
         public uint? OwnerId;
@@ -19,38 +20,67 @@ namespace MegabonkTogether.Scripts
         public bool? hasBeenSetByServer;
     }
 
-    public static class NetEntityExtensions
+    public static class NetDataManager
     {
-        public static NetEntity GetOrAddNetEntity(this GameObject obj)
+        public static readonly Dictionary<int, NetData> Data = new();
+    }
+
+    public class NetEntity : MonoBehaviour
+    {
+        public NetData Data
         {
-            if (obj == null) return null;
-            var netEntity = obj.GetComponent<NetEntity>();
-            if (netEntity == null) netEntity = obj.AddComponent<NetEntity>();
-            return netEntity;
+            get
+            {
+                int id = this.gameObject.GetInstanceID();
+                if (!NetDataManager.Data.TryGetValue(id, out var data))
+                {
+                    data = new NetData();
+                    NetDataManager.Data[id] = data;
+                }
+                return data;
+            }
         }
 
-        public static NetEntity GetOrAddNetEntity(this Component comp)
+        private void OnDestroy()
         {
-            if (comp == null || comp.gameObject == null) return null;
-            return GetOrAddNetEntity(comp.gameObject);
+            if (this.gameObject != null)
+            {
+                NetDataManager.Data.Remove(this.gameObject.GetInstanceID());
+            }
         }
     }
 
-    public static class NetData
+    public static class NetEntityExtensions
     {
-        public class NetEntityState
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, NetData> cwt = new();
+
+        public static NetData GetOrAddNetEntity(this GameObject obj)
         {
-            public uint? OwnerId;
-            public uint? TargetId;
-            public uint? PickupId;
+            if (obj == null) return new NetData();
+
+            var netEntity = obj.GetComponent<NetEntity>();
+            if (netEntity == null)
+            {
+                netEntity = obj.AddComponent<NetEntity>();
+            }
+
+            return netEntity.Data;
         }
 
-        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, NetEntityState> data = new();
-
-        public static NetEntityState Get(object obj)
+        public static NetData GetOrAddNetEntity(this Component comp)
         {
-            if (obj == null) return new NetEntityState();
-            return data.GetOrCreateValue(obj);
+            if (comp == null) return new NetData();
+            if (comp.gameObject != null)
+            {
+                return GetOrAddNetEntity(comp.gameObject);
+            }
+            return cwt.GetOrCreateValue(comp);
+        }
+
+        public static NetData GetOrAddNetEntity(this Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase obj)
+        {
+            if (obj == null) return new NetData();
+            return cwt.GetOrCreateValue(obj);
         }
     }
 }
