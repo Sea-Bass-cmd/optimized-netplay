@@ -1,4 +1,4 @@
-﻿using Assets.Scripts.Game.MapGeneration.MapEvents;
+using Assets.Scripts.Game.MapGeneration.MapEvents;
 using Assets.Scripts.Inventory__Items__Pickups;
 using Assets.Scripts.Inventory__Items__Pickups.Items;
 using Assets.Scripts.Inventory__Items__Pickups.Stats;
@@ -104,6 +104,7 @@ namespace MegabonkTogether
             ModConfig.Initialize(Config);
             Log.LogInfo($"Player name set to: {ModConfig.PlayerName.Value}");
 
+            ClassInjector.RegisterTypeInIl2Cpp<NetEntity>();
             ClassInjector.RegisterTypeInIl2Cpp<NetPlayer>();
             ClassInjector.RegisterTypeInIl2Cpp<CoroutineRunner>();
             ClassInjector.RegisterTypeInIl2Cpp<MainThreadDispatcher>();
